@@ -21,11 +21,12 @@ import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.navigation.NavController
 import com.example.weatherforecast.widgets.CustomScaffold
 
 @Composable
-fun SettingsScreen(){
-    CustomScaffold(title = "Settings", goBack = {}) {
+fun SettingsScreen(navController: NavController?){
+    CustomScaffold(title = "Settings", navController = navController) {
         Column(modifier = Modifier.fillMaxSize(),
             verticalArrangement = Arrangement.Center) {
             Column (modifier = Modifier.fillMaxWidth(),

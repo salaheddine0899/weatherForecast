@@ -12,14 +12,15 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.navigation.NavController
 import com.example.weatherforecast.widgets.CustomScaffold
 
 @Composable
-fun SearchScreen(){
+fun SearchScreen(navController: NavController?){
     val cityState = remember { mutableStateOf("Casablanca") }
     CustomScaffold(
         title = "Search",
-        goBack = {}
+        navController = navController
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
             Row(modifier = Modifier.fillMaxWidth(),
