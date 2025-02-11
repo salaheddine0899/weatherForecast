@@ -1,3 +1,7 @@
+import java.util.Properties
+import java.io.FileInputStream
+
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -18,6 +22,18 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        val localProperties = Properties()
+        val propertiesFile = rootProject.file("app/.env.properties")
+        if (propertiesFile.exists()) {
+            localProperties.load(FileInputStream(propertiesFile))
+        }
+        buildFeatures {
+            compose = true
+            buildConfig = true
+
+        }
+        buildConfigField("String", "API_KEY", "\"" + localProperties["API_KEY"] + "\"")
+
     }
 
     buildTypes {
@@ -56,6 +72,7 @@ dependencies {
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.material3)
     implementation(libs.hilt.android)
+    implementation(libs.androidx.hilt.navigation.compose)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.coil.compose)
     implementation(libs.coil.network.okhttp)

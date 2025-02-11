@@ -1,17 +1,17 @@
 package com.example.weatherforecast.model
 
-data class Item0(
+data class WeatherDetails(
     val clouds: Int,
     val deg: Int,
     val dt: Int,
     val feels_like: FeelsLike,
     val gust: Double,
     val humidity: Int,
-    val pop: Int,
+    val pop: Double,
     val pressure: Int,
     val speed: Double,
     val sunrise: Int,
     val sunset: Int,
     val temp: Temp,
-    val weather: List<Weather>
+    val weather: List<WeatherObject>
 )
