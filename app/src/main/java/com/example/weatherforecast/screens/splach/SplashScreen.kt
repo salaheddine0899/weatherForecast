@@ -43,7 +43,7 @@ fun SplashScreen(navController: NavController?){
             }
         ))
         delay(2000L)
-        navController?.navigate(route = WeatherScreens.HomeScreen.path)
+        navController?.navigate(route = WeatherScreens.HomeScreen.path+"/Casablanca")
     }
     Column(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally) {

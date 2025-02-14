@@ -7,11 +7,13 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.absolutePadding
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
@@ -21,6 +23,8 @@ import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -29,7 +33,10 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -59,21 +66,28 @@ import com.example.weatherforecast.widgets.CustomImage
 @Composable
 fun HomeScreen(
     navController: NavController?,
-    viewModel: WeatherViewModel = hiltViewModel()
+    viewModel: WeatherViewModel = hiltViewModel(),
+    city: String = "Casablanca"
 ) {
 
     val weatherData = produceState<DataOrException<Weather, Exception>>(initialValue = DataOrException(loading = true)){
-        value = viewModel.reloadWeather(city = "Mohammedia", units = "metric")
+        value = viewModel.reloadWeather(city = city, units = "metric")
     }.value
+
+    val showDialog = remember { mutableStateOf(false) }
 
     if(weatherData.loading == true){
         CustomCircularProgress()
     }
     else if (weatherData.success == true) {
+        if(showDialog.value){
+            ShowSettingDropDownMenu(showDialog = showDialog, navController= navController)
+        }
         Scaffold(topBar = {
             HomeTopBar(
                 title = weatherData.data?.city?.name+", "+ weatherData.data?.city?.country ,
-                navController = navController
+                navController = navController,
+                showDialog= showDialog
             )
         }) { innerPadding ->
             MainContent(innerPadding, weather = weatherData.data)
@@ -83,7 +97,79 @@ fun HomeScreen(
 }
 
 @Composable
-private fun MainContent(innerPadding: PaddingValues, weather: Weather?) {
+fun ShowSettingDropDownMenu(showDialog: MutableState<Boolean>, navController: NavController?) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .wrapContentSize(Alignment.TopEnd)
+            .absolutePadding(top = 45.dp, right = 20.dp)
+    ) {
+        DropdownMenu(
+            expanded = showDialog.value,  // Use showDialog directly
+            onDismissRequest = { showDialog.value = false },
+            modifier = Modifier
+                .width(140.dp)
+                .background(color = Color.White)
+        ) {
+            Column {
+                DropDownItem(
+                    title = "Favorite",
+                    icon = R.drawable.star,
+                    navController = navController,
+                    route = WeatherScreens.FavoriteCitiesScreen.path,
+                    showDialog = showDialog
+                )
+                DropDownItem(
+                    title = "About",
+                    icon = R.drawable.info_outline,
+                    navController = navController,
+                    route = WeatherScreens.AboutScreen.path,
+                    showDialog = showDialog
+                )
+                DropDownItem(
+                    title = "Settings",
+                    icon = R.drawable.settings,
+                    navController = navController,
+                    route = WeatherScreens.SettingsScreen.path,
+                    showDialog = showDialog
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun DropDownItem(
+    title: String,
+    navController: NavController?,
+    icon: Int,
+    route: String,
+    showDialog: MutableState<Boolean>
+) {
+    DropdownMenuItem(
+        onClick = {
+            navController?.navigate(route)
+            showDialog.value = false // Close the dropdown when an item is clicked
+        },
+        text = {
+            Row(modifier = Modifier.fillMaxWidth()) {
+                Icon(
+                    painter = painterResource(id = icon),
+                    contentDescription = "drop down item"
+                )
+                Text(text = title)
+            }
+        },
+        modifier = Modifier.fillMaxWidth()
+    )
+}
+
+
+@Composable
+private fun MainContent(
+    innerPadding: PaddingValues,
+    weather: Weather?,
+) {
     val weatherItem = weather!!.list[0]
     val imageUrl = "https://openweathermap.org/img/wn/${weatherItem.weather[0].icon}.png"
     Column(
@@ -211,7 +297,8 @@ fun WeatherStateImage(imageUrl: String) {
 @Composable
 fun HomeTopBar(
     title: String,
-    navController: NavController?
+    navController: NavController?,
+    showDialog: MutableState<Boolean>
 ) {
     TopAppBar(
         title = { Text(text = title) },
@@ -244,7 +331,7 @@ fun HomeTopBar(
                                 horizontalArrangement = Arrangement.End
                             ) {
                                 Icon(imageVector = Icons.Default.Search,
-                                    contentDescription = "more vert",
+                                    contentDescription = "search icon",
                                     modifier = Modifier.clickable {
                                         navController?.navigate(
                                             route = WeatherScreens.SearchScreen.path
@@ -253,7 +340,8 @@ fun HomeTopBar(
                                 Spacer(modifier = Modifier.width(15.dp))
                                 Icon(
                                     imageVector = Icons.Default.MoreVert,
-                                    contentDescription = "more vert"
+                                    contentDescription = "more vert",
+                                    modifier = Modifier.clickable { showDialog.value = !showDialog.value }
                                 )
                             }
                         }
