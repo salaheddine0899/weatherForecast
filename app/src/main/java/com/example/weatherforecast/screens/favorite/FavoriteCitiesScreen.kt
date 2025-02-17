@@ -16,14 +16,18 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
+import com.example.weatherforecast.viewmodel.FavoriteViewModel
 import com.example.weatherforecast.widgets.CustomScaffold
 
 data class City(val label: String, val country: String)
@@ -34,7 +38,8 @@ val cities = listOf(
     )
 
 @Composable
-fun FavoriteCitiesScreen(navController: NavController?){
+fun FavoriteCitiesScreen(navController: NavController?, favoriteViewModel: FavoriteViewModel = hiltViewModel()){
+    val cities = favoriteViewModel.favoriteList.collectAsState().value
     CustomScaffold(title = "Favorite Cities", navController = navController) {
         LazyColumn {
             items(items = cities){ city ->
@@ -46,11 +51,15 @@ fun FavoriteCitiesScreen(navController: NavController?){
                     Column(modifier = Modifier.fillMaxSize(),verticalArrangement = Arrangement.Center) {
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.
                         SpaceEvenly) {
-                            Text(text = city.label, fontWeight = FontWeight.Bold)
+                            Text(text = city.cityLabel, fontWeight = FontWeight.Bold)
                             Card(colors = CardDefaults.cardColors(containerColor = Color.Green),) {
                                 Text(text = city.country)
                             }
-                            Icon(imageVector = Icons.Filled.Delete, contentDescription = "Delete city")
+                            IconButton( onClick = {
+                                favoriteViewModel.deleteFavorite(city)
+                            }) {
+                                Icon(imageVector = Icons.Filled.Delete, contentDescription = "Delete city")
+                            }
                         }
                     }
                 }

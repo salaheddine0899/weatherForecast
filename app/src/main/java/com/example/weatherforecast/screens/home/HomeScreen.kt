@@ -1,5 +1,6 @@
 package com.example.weatherforecast.screens.home
 
+import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -28,6 +29,7 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -50,6 +52,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.example.weatherforecast.R
 import com.example.weatherforecast.data.DataOrException
+import com.example.weatherforecast.entity.Favorite
 import com.example.weatherforecast.model.Weather
 import com.example.weatherforecast.model.WeatherDetails
 import com.example.weatherforecast.navigation.WeatherScreens
@@ -58,6 +61,7 @@ import com.example.weatherforecast.utils.formatDate
 import com.example.weatherforecast.utils.formatDecimals
 import com.example.weatherforecast.utils.formatTimestampToTime
 import com.example.weatherforecast.utils.getDayFromDate
+import com.example.weatherforecast.viewmodel.FavoriteViewModel
 import com.example.weatherforecast.viewmodel.WeatherViewModel
 import com.example.weatherforecast.widgets.CustomCircularProgress
 import com.example.weatherforecast.widgets.CustomImage
@@ -70,29 +74,35 @@ fun HomeScreen(
     city: String = "Casablanca"
 ) {
 
-    val weatherData = produceState<DataOrException<Weather, Exception>>(initialValue = DataOrException(loading = true)){
-        value = viewModel.reloadWeather(city = city, units = "metric")
-    }.value
 
-    val showDialog = remember { mutableStateOf(false) }
+    if(viewModel.unitState.value ==  WeatherViewModel.UnitState.Success(
+            viewModel.unit.value)) {
+        val weatherData =
+            produceState<DataOrException<Weather, Exception>>(initialValue = DataOrException(loading = true)) {
+                value = viewModel.reloadWeather(city = city)
+            }.value
 
-    if(weatherData.loading == true){
+        val showDialog = remember { mutableStateOf(false) }
+        if (weatherData.loading == true) {
+            CustomCircularProgress()
+        } else if (weatherData.success == true) {
+            Log.d("tag", viewModel.unit.value.toString())
+            if (showDialog.value) {
+                ShowSettingDropDownMenu(showDialog = showDialog, navController = navController)
+            }
+            Scaffold(topBar = {
+                HomeTopBar(
+                    navController = navController,
+                    showDialog = showDialog,
+                    weatherData = weatherData
+                )
+            }) { innerPadding ->
+                MainContent(innerPadding, weather = weatherData.data)
+            }
+        }
+    }else
         CustomCircularProgress()
-    }
-    else if (weatherData.success == true) {
-        if(showDialog.value){
-            ShowSettingDropDownMenu(showDialog = showDialog, navController= navController)
-        }
-        Scaffold(topBar = {
-            HomeTopBar(
-                title = weatherData.data?.city?.name+", "+ weatherData.data?.city?.country ,
-                navController = navController,
-                showDialog= showDialog
-            )
-        }) { innerPadding ->
-            MainContent(innerPadding, weather = weatherData.data)
-        }
-    }
+
 
 }
 
@@ -195,15 +205,16 @@ private fun MainContent(
                     modifier = Modifier.fillMaxSize(), verticalArrangement =
                     Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    WeatherStateImage(imageUrl=imageUrl)
+                    WeatherStateImage(imageUrl = imageUrl)
                     Text(
-                        text = formatDecimals( weatherItem.temp.day)+"°C", style = MaterialTheme.typography.headlineLarge,
+                        text = formatDecimals(weatherItem.temp.day) + "°C",
+                        style = MaterialTheme.typography.headlineLarge,
                         fontWeight = FontWeight.ExtraBold
                     )
                     Text(text = weatherItem.weather[0].main, fontStyle = FontStyle.Italic)
                 }
             }
-            HumidityWindPressureRow(weatherItem=weatherItem)
+            HumidityWindPressureRow(weatherItem = weatherItem)
             HorizontalDivider(thickness = 1.dp)
             SunSetAndRiseRow(weatherItem = weatherItem)
             WeatherWeek(weather = weather)
@@ -215,30 +226,63 @@ private fun MainContent(
 fun WeatherWeek(weather: Weather) {
     Column(modifier = Modifier.fillMaxSize()) {
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
-            Text(text = "This Week", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.ExtraBold)
+            Text(
+                text = "This Week",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.ExtraBold
+            )
         }
-        LazyColumn(modifier = Modifier.background(color = Color.LightGray).fillMaxSize()) {
-            items(items = weather.list){ weatherItem ->
-                val imageUrl = "https://openweathermap.org/img/wn/${weatherItem.weather[0].icon}.png"
-                Card(modifier = Modifier.padding(bottom = 12.dp,).padding(horizontal = 12.dp).fillMaxWidth().clip(shape =
-                    RoundedCornerShape(bottomEnd = 30.dp, topStart = 30.dp, bottomStart = 30.dp),),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.background)) {
-                    Row(modifier = Modifier.fillMaxWidth().padding(8.dp), horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically) {
+        LazyColumn(modifier = Modifier
+            .background(color = Color.LightGray)
+            .fillMaxSize()) {
+            items(items = weather.list) { weatherItem ->
+                val imageUrl =
+                    "https://openweathermap.org/img/wn/${weatherItem.weather[0].icon}.png"
+                Card(
+                    modifier = Modifier
+                        .padding(bottom = 12.dp)
+                        .padding(horizontal = 12.dp)
+                        .fillMaxWidth()
+                        .clip(
+                            shape =
+                            RoundedCornerShape(
+                                bottomEnd = 30.dp,
+                                topStart = 30.dp,
+                                bottomStart = 30.dp
+                            ),
+                        ),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.background)
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(8.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
                         Text(text = getDayFromDate(weatherItem.sunset))
                         WeatherStateImage(imageUrl = imageUrl)
-                        Card( modifier = Modifier.padding(5.dp), shape = RoundedCornerShape(10.dp),
+                        Card(
+                            modifier = Modifier.padding(5.dp), shape = RoundedCornerShape(10.dp),
                             colors = CardDefaults.cardColors(containerColor = YellowSun)
-                            ) {
-                            Row(horizontalArrangement = Arrangement.Center,) {
+                        ) {
+                            Row(horizontalArrangement = Arrangement.Center) {
                                 Text(text = weatherItem.weather[0].main)
                             }
                         }
-                        Row{
-                            Text(text = "${formatDecimals(weatherItem.temp.max)}°", style = MaterialTheme
-                                .typography.titleMedium, color =  Color.Blue,)
-                            Text(text = "${formatDecimals(weatherItem.temp.min)}°", style = MaterialTheme
-                                .typography.titleMedium, color =  Color.LightGray,)
+                        Row {
+                            Text(
+                                text = "${formatDecimals(weatherItem.temp.max)}°",
+                                style = MaterialTheme
+                                    .typography.titleMedium,
+                                color = Color.Blue,
+                            )
+                            Text(
+                                text = "${formatDecimals(weatherItem.temp.min)}°",
+                                style = MaterialTheme
+                                    .typography.titleMedium,
+                                color = Color.LightGray,
+                            )
                         }
                     }
                 }
@@ -250,12 +294,18 @@ fun WeatherWeek(weather: Weather) {
 
 @Composable
 fun SunSetAndRiseRow(weatherItem: WeatherDetails) {
-    Row(modifier = Modifier.padding(horizontal = 12.dp, vertical = 20.dp).fillMaxWidth(),
+    Row(
+        modifier = Modifier
+            .padding(horizontal = 12.dp, vertical = 20.dp)
+            .fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween){
-        Row{
-            Icon(painter = painterResource(id = R.drawable.sunrise),
-                contentDescription = "sunrise")
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Row {
+            Icon(
+                painter = painterResource(id = R.drawable.sunrise),
+                contentDescription = "sunrise"
+            )
             Text(text = formatTimestampToTime(weatherItem.sunrise))
         }
         Row {
@@ -268,7 +318,10 @@ fun SunSetAndRiseRow(weatherItem: WeatherDetails) {
 @Composable
 private fun HumidityWindPressureRow(weatherItem: WeatherDetails) {
     Row(
-        modifier = Modifier.fillMaxWidth().padding(12.dp), verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(12.dp),
+        verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
         RowItem(text = weatherItem.humidity.toString() + "%", icon = R.drawable.humidity)
@@ -278,7 +331,7 @@ private fun HumidityWindPressureRow(weatherItem: WeatherDetails) {
 }
 
 @Composable
-private fun RowItem( text: String, icon: Int) {
+private fun RowItem(text: String, icon: Int) {
     Row {
         Icon(
             painter = painterResource(id = icon), contentDescription = "humidity",
@@ -296,12 +349,16 @@ fun WeatherStateImage(imageUrl: String) {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeTopBar(
-    title: String,
     navController: NavController?,
-    showDialog: MutableState<Boolean>
+    showDialog: MutableState<Boolean>,
+    favoriteViewModel: FavoriteViewModel = hiltViewModel(),
+    weatherData: DataOrException<Weather, Exception>
 ) {
+    favoriteViewModel.isCityFavorite(weatherData.data!!.city.name)
+    Log.d("isFav", favoriteViewModel.isFavorite.value.toString())
     TopAppBar(
-        title = { Text(text = title) },
+        title = { Text(text = weatherData.data?.city?.name +
+                ", " + weatherData.data?.city?.country) },
         actions = {
             Row(
                 modifier = Modifier
@@ -315,35 +372,56 @@ fun HomeTopBar(
                 ) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.End
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
+                        Row {
+                            if(favoriteViewModel.isFavorite.value)
+                                IconButton(onClick = {
+                                    favoriteViewModel.deleteFavorite(Favorite(cityLabel = weatherData.data!!.city.name,
+                                        country = weatherData.data!!.city.country))
+                                    favoriteViewModel.isFavorite.value = false
+                                }) {
+                                    Icon(
+                                        painter = painterResource(id = R.drawable.star),
+                                        contentDescription = "favorite city"
+                                    )
+                                }
+                            else
+                                IconButton(onClick = {
+                                    favoriteViewModel.addFavorite(Favorite(cityLabel = weatherData.data!!.city.name,
+                                        country = weatherData.data!!.city.country))
+                                    favoriteViewModel.isFavorite.value = true
+                                }) {
+                                    Icon(
+                                        painter = painterResource(id = R.drawable.star_outline),
+                                        contentDescription = "favorite city"
+                                    )
+                                }
+                        }
+                        Row {
+                            Text(text = weatherData.data?.city?.name + ", "
+                                    + weatherData.data?.city?.country, fontWeight = FontWeight.Bold)
+                        }
                         Row(
-                            modifier = Modifier.fillMaxWidth(0.6f),
-                            horizontalArrangement = Arrangement.SpaceBetween
+                            modifier = Modifier
+                                .padding(horizontal = 15.dp)
                         ) {
-                            Row(horizontalArrangement = Arrangement.Start) {
-                                Text(text = title, fontWeight = FontWeight.Bold)
-                            }
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 15.dp),
-                                horizontalArrangement = Arrangement.End
-                            ) {
-                                Icon(imageVector = Icons.Default.Search,
-                                    contentDescription = "search icon",
-                                    modifier = Modifier.clickable {
-                                        navController?.navigate(
-                                            route = WeatherScreens.SearchScreen.path
-                                        )
-                                    })
-                                Spacer(modifier = Modifier.width(15.dp))
-                                Icon(
-                                    imageVector = Icons.Default.MoreVert,
-                                    contentDescription = "more vert",
-                                    modifier = Modifier.clickable { showDialog.value = !showDialog.value }
-                                )
-                            }
+                            Icon(imageVector = Icons.Default.Search,
+                                contentDescription = "search icon",
+                                modifier = Modifier.clickable {
+                                    navController?.navigate(
+                                        route = WeatherScreens.SearchScreen.path
+                                    )
+                                })
+                            Spacer(modifier = Modifier.width(15.dp))
+                            Icon(
+                                imageVector = Icons.Default.MoreVert,
+                                contentDescription = "more vert",
+                                modifier = Modifier.clickable {
+                                    showDialog.value = !showDialog.value
+                                }
+                            )
                         }
                     }
                 }
