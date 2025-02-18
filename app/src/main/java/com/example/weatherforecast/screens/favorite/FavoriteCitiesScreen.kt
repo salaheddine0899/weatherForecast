@@ -27,18 +27,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
+import com.example.weatherforecast.navigation.WeatherScreens
 import com.example.weatherforecast.viewmodel.FavoriteViewModel
 import com.example.weatherforecast.widgets.CustomScaffold
-
-data class City(val label: String, val country: String)
-val cities = listOf(
-    City(label = "Casablanca", country = "MA"),
-    City(label = "Rabat", country = "MA"),
-    City(label = "Abdellah", country = "MA"),
-    )
-
 @Composable
-fun FavoriteCitiesScreen(navController: NavController?, favoriteViewModel: FavoriteViewModel = hiltViewModel()){
+fun FavoriteCitiesScreen(navController: NavController?, favoriteViewModel: FavoriteViewModel = hiltViewModel(), ){
     val cities = favoriteViewModel.favoriteList.collectAsState().value
     CustomScaffold(title = "Favorite Cities", navController = navController) {
         LazyColumn {
@@ -47,6 +40,8 @@ fun FavoriteCitiesScreen(navController: NavController?, favoriteViewModel: Favor
                     modifier = Modifier.fillMaxWidth().height(50.dp).padding(horizontal = 15.dp).
                     clip(RoundedCornerShape(bottomEnd = 33.dp, topStart = 33.dp,
                         bottomStart = 33.dp),),
+                    onClick = {navController?.navigate(
+                        route = "${WeatherScreens.HomeScreen.path}/${city.cityLabel}")}
                     ) {
                     Column(modifier = Modifier.fillMaxSize(),verticalArrangement = Arrangement.Center) {
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.

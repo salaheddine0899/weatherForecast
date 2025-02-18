@@ -53,6 +53,7 @@ import androidx.navigation.NavController
 import com.example.weatherforecast.R
 import com.example.weatherforecast.data.DataOrException
 import com.example.weatherforecast.entity.Favorite
+import com.example.weatherforecast.enums.TemperatureUnitEnum
 import com.example.weatherforecast.model.Weather
 import com.example.weatherforecast.model.WeatherDetails
 import com.example.weatherforecast.navigation.WeatherScreens
@@ -86,7 +87,6 @@ fun HomeScreen(
         if (weatherData.loading == true) {
             CustomCircularProgress()
         } else if (weatherData.success == true) {
-            Log.d("tag", viewModel.unit.value.toString())
             if (showDialog.value) {
                 ShowSettingDropDownMenu(showDialog = showDialog, navController = navController)
             }
@@ -179,6 +179,7 @@ private fun DropDownItem(
 private fun MainContent(
     innerPadding: PaddingValues,
     weather: Weather?,
+    viewModel: WeatherViewModel= hiltViewModel()
 ) {
     val weatherItem = weather!!.list[0]
     val imageUrl = "https://openweathermap.org/img/wn/${weatherItem.weather[0].icon}.png"
@@ -207,14 +208,14 @@ private fun MainContent(
                 ) {
                     WeatherStateImage(imageUrl = imageUrl)
                     Text(
-                        text = formatDecimals(weatherItem.temp.day) + "°C",
+                        text = formatDecimals(weatherItem.temp.day) + viewModel.unit.value.symbol,
                         style = MaterialTheme.typography.headlineLarge,
                         fontWeight = FontWeight.ExtraBold
                     )
                     Text(text = weatherItem.weather[0].main, fontStyle = FontStyle.Italic)
                 }
             }
-            HumidityWindPressureRow(weatherItem = weatherItem)
+            HumidityWindPressureRow(weatherItem = weatherItem, unit = viewModel.unit.value)
             HorizontalDivider(thickness = 1.dp)
             SunSetAndRiseRow(weatherItem = weatherItem)
             WeatherWeek(weather = weather)
@@ -316,7 +317,7 @@ fun SunSetAndRiseRow(weatherItem: WeatherDetails) {
 }
 
 @Composable
-private fun HumidityWindPressureRow(weatherItem: WeatherDetails) {
+private fun HumidityWindPressureRow(weatherItem: WeatherDetails, unit: TemperatureUnitEnum) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -326,7 +327,8 @@ private fun HumidityWindPressureRow(weatherItem: WeatherDetails) {
     ) {
         RowItem(text = weatherItem.humidity.toString() + "%", icon = R.drawable.humidity)
         RowItem(text = weatherItem.pressure.toString() + " psi", icon = R.drawable.barometer)
-        RowItem(text = formatDecimals(weatherItem.gust) + "mph", icon = R.drawable.wind)
+        RowItem(text = formatDecimals(weatherItem.gust) + if(unit == TemperatureUnitEnum.FAHRENHEIT)
+            "mph" else "m/s", icon = R.drawable.wind)
     }
 }
 
